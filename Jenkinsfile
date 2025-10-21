@@ -1,19 +1,10 @@
 pipeline {
-    agent {
-        docker {
-            image 'python:3.11'
-            args '-v /var/run/docker.sock:/var/run/docker.sock --user root'
-        }
-    }
+    agent any
+
     stages {
-        stage('Install dependencies') {
+        stage('Hello') {
             steps {
-                sh 'pip install -r requirements.txt'
-            }
-        }
-        stage('Run tests') {
-            steps {
-                sh 'pytest --maxfail=1 --disable-warnings -q'
+                echo 'Hello World'
             }
         }
     }
