@@ -1,27 +1,38 @@
 pipeline {
     agent {
         docker {
-            image 'python:3.11'  // 使用 Python 3.11 官方 Docker 映像
+            image 'python:3.11'  // 使用官方 Python 映像
+	    args '-u root'   // 👉 用 root 執行 pipeline 內部命令
         }
     }
 
     stages {
         stage('Checkout') {
             steps {
-                checkout scm
+                git branch: 'main',
+                    url: 'https://github.com/cba542/jenkins-pipeline-demo.git'
             }
         }
 
         stage('Install dependencies') {
             steps {
-                sh 'pip install --upgrade pip'
-                sh 'pip install -r requirements.txt'
+                sh '''
+                    pip install --upgrade pip
+                    pip install -r requirements.txt
+                    pip install pytest
+                '''
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh 'pytest --maxfail=1 --disable-warnings -q'
+                sh '''
+                    python --version
+                    python3 --version
+                    pytest --maxfail=1 --disable-warnings -q
+                    python main.py
+                    python3 main.py
+                '''
             }
         }
     }
@@ -34,7 +45,7 @@ pipeline {
             echo '✅ All tests passed successfully!'
         }
         failure {
-            echo '❌ Some tests failed.'
+            echo '❌ Tests failed.'
         }
     }
 }
