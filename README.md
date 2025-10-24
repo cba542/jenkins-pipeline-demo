@@ -7,17 +7,20 @@
 ## 🚀 Jenkins 安裝與啟動
 
 ```bash
-docker run -d -p 8080:8080 -p 50000:50000 \
--v D:\docker\jenkins_home_2:/var/jenkins_home \
--v //var/run/docker.sock:/var/run/docker.sock \
---name jenkins jenkins/jenkins:lts-jdk17
+docker run -d `
+  -p 8081:8080 `
+  -p 50001:50000 `
+  -v "D:\docker\jenkins_home:/var/jenkins_home" `
+  -v "//var/run/docker.sock:/var/run/docker.sock" `
+  --name jenkins_new `
+  jenkins/jenkins:lts-jdk17
 ```
 
 | 參數 | 功能 |
 | ---- | ---- |
 | `-p 8080:8080` | Jenkins 主介面 Port |
 | `-p 50000:50000` | Jenkins Agent 連線 Port |
-| `-v D:\docker\jenkins_home_2:/var/jenkins_home` | Jenkins 資料持久化 |
+| `-v D:\docker\jenkins_home:/var/jenkins_home` | Jenkins 資料持久化 |
 | `-v //var/run/docker.sock:/var/run/docker.sock` | 讓 Jenkins 可操作宿主 Docker |
 | `--name jenkins` | 容器名稱 |
 | `jenkins/jenkins:lts-jdk17` | Jenkins LTS 映像（含 JDK17） |
