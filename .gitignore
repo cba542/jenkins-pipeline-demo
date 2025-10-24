@@ -1,0 +1,66 @@
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+env/
+ENV/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# IDE / Editor settings
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Logs and temp files ===
+*.log
+*.tmp
+*.bak
+*.swp
+*.pid
+*.seed
+.DS_Store
+
+# === OS generated ===
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# === Docker / Jenkins ===
+# Jenkins working directories
+/var/jenkins_home/
+**/jenkins_home_*/
+**/jenkins_home_*
+
+# Docker-related
+*.tar
+*.img
+*.pid
+*.sock
+*.lock
+docker-compose.override.yml
+
+# === Git ===
+*.orig
+*.rej
+*.patch
+
+# === Test outputs ===
+.coverage
+.pytest_cache/
+htmlcov/
+junit*.xml
+nosetests.xml
+coverage.xml
+
+# === Build / Distribution ===
+build/
+dist/
+*.egg-info/
+.eggs/
+MANIFEST
