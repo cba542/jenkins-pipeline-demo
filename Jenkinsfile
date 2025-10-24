@@ -2,18 +2,11 @@ pipeline {
     agent {
         docker {
             image 'python:3.11'  // 使用官方 Python 映像
-	    args '-u root'   // 👉 用 root 執行 pipeline 內部命令
+            args '-u root'       // 用 root 執行 pipeline 內部命令
         }
     }
 
     stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main',
-                    url: 'https://github.com/cba542/jenkins-pipeline-demo.git'
-            }
-        }
-
         stage('Install dependencies') {
             steps {
                 sh '''
