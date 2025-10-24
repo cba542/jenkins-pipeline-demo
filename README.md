@@ -1,111 +1,47 @@
-# 🧰 Jenkins Python Pipeline Setup Guide (with Docker)
 
-本文件說明如何在 Docker 上安裝 Jenkins、設定 Python Pipeline，並包含 **安裝 Docker CLI 的兩種方法**。
+# 🧱 Jenkins Python Pipeline + Docker 整合指南 (v7)
+
+本文件涵蓋 Jenkins Pipeline、Docker 部署、完整備份與還原策略，並附常見錯誤排查。
 
 ---
 
-## 🚀 Quick Start
+## 🚀 環境建置
 
-### 🧱 Jenkins + Docker 安裝
-
-#### PowerShell
+### PowerShell
 
 ```powershell
 docker run -d `
   -p 8081:8080 `
   -p 50001:50000 `
-  -v "D:\docker\jenkins_home:/var/jenkins_home" `
+  -v "D:\docker\jenkins_home_original:/var/jenkins_home" `
   -v "//var/run/docker.sock:/var/run/docker.sock" `
   --name jenkins_new `
   jenkins/jenkins:lts-jdk17
 ```
 
-#### CMD
+### CMD
 
 ```cmd
-mkdir D:\docker\jenkins_home
-
 docker run -d -p 8081:8080 -p 50001:50000 ^
--v D:\docker\jenkins_home:/var/jenkins_home ^
+-v D:\docker\jenkins_home_original:/var/jenkins_home ^
 -v //var/run/docker.sock:/var/run/docker.sock ^
 --name jenkins_new jenkins/jenkins:lts-jdk17
 ```
 
-| 參數 | 說明 |
+| 參數 | 功能 |
 |------|------|
-| `-p 8081:8080` | Jenkins 主網頁 Port |
-| `-p 50001:50000` | Jenkins Agent 連線 Port |
-| `-v D:\docker\jenkins_home:/var/jenkins_home` | Jenkins 資料持久化 |
-| `-v //var/run/docker.sock:/var/run/docker.sock` | 掛載宿主 Docker |
-| `--name jenkins_new` | 容器名稱 |
+| `-p 8080:8080` | Jenkins 主介面 Port |
+| `-p 50000:50000` | Agent 連線 Port |
+| `-v D:\docker\jenkins_home_original:/var/jenkins_home` | Jenkins 資料持久化 |
+| `-v //var/run/docker.sock:/var/run/docker.sock` | 宿主 Docker 掛載 |
+| `--name jenkins` | 容器名稱 |
 | `jenkins/jenkins:lts-jdk17` | Jenkins LTS 映像 |
-
----
-
-## 🌐 登入 Jenkins
-
-開啟瀏覽器 → [http://localhost:8081](http://localhost:8081)  
-初次登入密碼位於：  
-`D:\docker\jenkins_home\secrets\initialAdminPassword`
-
----
-
-## 🔧 安裝插件
-
-在 Jenkins 網頁 → **Manage Jenkins → Manage Plugins → Available**
-
-建議安裝：
-- Docker Pipeline
-- Docker
-- Git
-- Pipeline
-- (可選) Blue Ocean
-
----
-
-## 🧩 常用 Docker / Jenkins 指令
-
-| 指令 | 功能 |
-|------|------|
-| `docker ps -a` | 查看容器運行狀況 |
-| `docker rm jenkins_new` | 刪除容器 |
-| `docker logs jenkins_new` | 查看 Jenkins 日誌 |
-| `docker exec -it jenkins_new bash` | 進入 Jenkins 容器 |
-| `docker restart jenkins_new` | 重新啟動 Jenkins |
 
 ---
 
 ## 🧱 使用自建 Dockerfile (內含 Docker CLI)
 
-若要在 Jenkins 容器內使用 `docker` 指令，有兩種方式：
-
----
-
-### 方法一：進入容器安裝 docker.io
-
-1. 進入 Jenkins 容器：
-   ```bash
-   docker exec -u 0 -it jenkins_new bash
-   ```
-
-2. 安裝 Docker CLI：
-   ```bash
-   apt-get update
-   apt-get install -y docker.io
-   ```
-
-3. 驗證是否安裝成功：
-   ```bash
-   docker --version
-   ```
-
-> ⚠️ 注意：這種方式在 **容器刪除後會遺失設定**，僅適合測試用途。
-
----
-
-### 方法二：自建 Jenkins + Docker CLI 映像
-
-建立一個 `Dockerfile`：
+建立 `Dockerfile`：
 
 ```dockerfile
 FROM jenkins/jenkins:lts-jdk17
@@ -114,86 +50,90 @@ RUN apt-get update && apt-get install -y docker.io
 USER jenkins
 ```
 
-建立映像：
+### 建立映像
 
 ```bash
-cd D:\docker\jenkins_custom_3
-docker build -t myjenkins-docker-3 .
+docker build -t myjenkins-docker:v1 .
 ```
 
-啟動 Jenkins：
+### 啟動 Jenkins 容器
 
-#### PowerShell
-
-```powershell
-docker run -d `
-  -p 8082:8080 `
-  -p 50002:50000 `
-  -v "D:\docker\jenkins_home_3:/var/jenkins_home" `
-  -v "//var/run/docker.sock:/var/run/docker.sock" `
-  --name jenkins_custom_3 `
-  myjenkins-docker-3
-```
-
-#### CMD
-
-```cmd
-mkdir D:\docker\jenkins_home_3
-
+```bash
 docker run -d -p 8082:8080 -p 50002:50000 ^
--v D:\docker\jenkins_home_3:/var/jenkins_home ^
--v //var/run/docker.sock:/var/run/docker.sock ^
---name jenkins_custom_3 myjenkins-docker-3
+  -v D:\docker\jenkins_home_new:/var/jenkins_home ^
+  -v //var/run/docker.sock:/var/run/docker.sock ^
+  --name jenkins_docker_v1 myjenkins-docker:v1
 ```
-
-✅ **優點**：Docker CLI 會預先安裝，重啟不會遺失設定。
 
 ---
 
-## ⚙️ Jenkinsfile 範例 (Python 測試)
+## 💾 Jenkins 完整備份與還原指南
 
-```groovy
-pipeline {
-    agent {
-        docker {
-            image 'python:3.11'
-            args '-u root'
-        }
-    }
+### 匯出 Jenkins home 資料夾
 
-    stages {
-        stage('Checkout') {
-            steps {
-                git branch: 'main', url: 'https://github.com/cba542/jenkins-pipeline-demo.git'
-            }
-        }
+```bash
+cd D:\docker
+tar -cvf jenkins_home_original_backup.tar jenkins_home_original
+```
 
-        stage('Install dependencies') {
-            steps {
-                sh '''
-                    pip install --upgrade pip
-                    pip install -r requirements.txt
-                    pip install pytest
-                '''
-            }
-        }
+### 匯出 Jenkins 映像
 
-        stage('Run Tests') {
-            steps {
-                sh '''
-                    python --version
-                    pytest --maxfail=1 --disable-warnings -q
-                    python main.py
-                '''
-            }
-        }
-    }
+```bash
+docker commit jenkins myjenkins:backup
+docker save -o D:\docker\myjenkins_backup.tar myjenkins:backup
+```
 
-    post {
-        success { echo '✅ All tests passed successfully!' }
-        failure { echo '❌ Tests failed.' }
-    }
-}
+### 匯入備份映像與資料夾
+
+```bash
+docker load -i D:\docker\myjenkins_backup.tar
+tar -xvf D:\docker\jenkins_home_original_backup.tar -C D:\docker\
+```
+
+### 啟動 Jenkins (使用還原資料)
+
+```bash
+docker run -d -p 8080:8080 -p 50000:50000 ^
+  -v D:\docker\jenkins_home_original:/var/jenkins_home ^
+  --name jenkins_restored myjenkins:backup
+```
+
+---
+
+## 🔍 查看 Jenkins 掛載目錄
+
+```bash
+docker inspect jenkins --format "{{ .Mounts }}"
+```
+
+輸出範例：
+```
+[{bind  D:\docker\jenkins_home_original  /var/jenkins_home  rw  true  rprivate}]
+```
+
+代表 Jenkins 的實際設定資料存在：
+> D:\docker\jenkins_home_original
+
+---
+
+## 🧹 Docker 清理與刪除映像
+
+### 查看懸空映像
+
+```bash
+docker images -f "dangling=true"
+```
+
+### 刪除單一 `<none>` 映像
+
+```bash
+docker rmi <image-id>
+```
+
+### 強制刪除所有未使用映像
+
+```bash
+docker image prune -a
 ```
 
 ---
@@ -211,14 +151,12 @@ pipeline {
 
 ---
 
-## ✅ 最終驗證步驟
+## 🧰 常用 Docker / Jenkins 指令
 
-1. 開啟 Jenkins → 新建 Pipeline 專案
-2. 選擇「Pipeline script from SCM」
-3. 指定 Git URL：`https://github.com/cba542/jenkins-pipeline-demo.git`
-4. 運行 Pipeline → 應顯示 `✅ All tests passed successfully!`
-
----
-
-📦 **完成！**  
-你的 Jenkins 現在可以自動從 Git 下載專案、安裝 Python 依賴、並執行自動化測試 🚀
+| 指令 | 用途 |
+|------|------|
+| `docker ps -a` | 查看所有容器 |
+| `docker logs jenkins` | 檢視 Jenkins 日誌 |
+| `docker exec -it jenkins bash` | 進入 Jenkins 容器 |
+| `docker restart jenkins` | 重新啟動 Jenkins |
+| `docker rm jenkins` | 刪除 Jenkins 容器 |
