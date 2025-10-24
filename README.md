@@ -157,6 +157,6 @@ docker image prune -a
 |------|------|
 | `docker ps -a` | 查看所有容器 |
 | `docker logs jenkins` | 檢視 Jenkins 日誌 |
-| `docker exec -it jenkins bash` | 進入 Jenkins 容器 |
+| `docker exec -it -u 0 jenkins bash` | 進入 Jenkins 容器 |
 | `docker restart jenkins` | 重新啟動 Jenkins |
 | `docker rm jenkins` | 刪除 Jenkins 容器 |
