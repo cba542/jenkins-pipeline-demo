@@ -1,12 +1,14 @@
-# 🐳 Jenkins Pipeline Setup with Docker (Python Example)
+# 🧰 Jenkins Python Pipeline Setup Guide (with Docker)
 
-本文件教你如何在 Windows 上使用 **Docker** 快速部署 Jenkins，並運行 Python Pipeline。
+本文件說明如何在 Docker 上安裝 Jenkins、設定 Python Pipeline，並包含 **安裝 Docker CLI 的兩種方法**。
 
 ---
 
-## 🚀 Jenkins 安裝與啟動
+## 🚀 Quick Start
 
-### 🧩 PowerShell 版本
+### 🧱 Jenkins + Docker 安裝
+
+#### PowerShell
 
 ```powershell
 docker run -d `
@@ -18,7 +20,7 @@ docker run -d `
   jenkins/jenkins:lts-jdk17
 ```
 
-### 💻 CMD 版本
+#### CMD
 
 ```cmd
 mkdir D:\docker\jenkins_home
@@ -29,61 +31,126 @@ docker run -d -p 8081:8080 -p 50001:50000 ^
 --name jenkins_new jenkins/jenkins:lts-jdk17
 ```
 
-| 參數 | 功能 |
-| ---- | ---- |
-| `-p 8081:8080` | Jenkins Web 介面 Port |
-| `-p 50001:50000` | Agent 連線 Port |
+| 參數 | 說明 |
+|------|------|
+| `-p 8081:8080` | Jenkins 主網頁 Port |
+| `-p 50001:50000` | Jenkins Agent 連線 Port |
 | `-v D:\docker\jenkins_home:/var/jenkins_home` | Jenkins 資料持久化 |
-| `-v //var/run/docker.sock:/var/run/docker.sock` | 讓 Jenkins 控制宿主 Docker |
+| `-v //var/run/docker.sock:/var/run/docker.sock` | 掛載宿主 Docker |
 | `--name jenkins_new` | 容器名稱 |
-| `jenkins/jenkins:lts-jdk17` | Jenkins LTS 官方映像 |
+| `jenkins/jenkins:lts-jdk17` | Jenkins LTS 映像 |
 
 ---
 
-## 🌐 Jenkins 初次登入
+## 🌐 登入 Jenkins
 
-啟動後開啟瀏覽器：  
-👉 [http://localhost:8081](http://localhost:8081)
-
-初始密碼位置：  
-```
-D:\docker\jenkins_home\secrets\initialAdminPassword
-```
-
-登入後選擇：  
-🔹 安裝建議插件（Install suggested plugins）  
-🔹 建立 admin 帳號
+開啟瀏覽器 → [http://localhost:8081](http://localhost:8081)  
+初次登入密碼位於：  
+`D:\docker\jenkins_home\secrets\initialAdminPassword`
 
 ---
 
-## 🔌 安裝必要插件
+## 🔧 安裝插件
 
-進入：**Manage Jenkins → Manage Plugins → Available**  
-搜尋並安裝：
+在 Jenkins 網頁 → **Manage Jenkins → Manage Plugins → Available**
 
-- Docker Pipeline  
-- Docker  
-- Git  
-- Pipeline  
+建議安裝：
+- Docker Pipeline
+- Docker
+- Git
+- Pipeline
 - (可選) Blue Ocean
 
 ---
 
-## 🧰 常用 Docker / Jenkins 指令
+## 🧩 常用 Docker / Jenkins 指令
 
 | 指令 | 功能 |
-| ---- | ---- |
-| `docker ps` | 查看正在運行的容器 |
-| `docker ps -a` | 查看所有容器（包含停止的） |
-| `docker stop jenkins_new` | 停止 Jenkins 容器 |
-| `docker rm jenkins_new` | 刪除 Jenkins 容器 |
+|------|------|
+| `docker ps -a` | 查看容器運行狀況 |
+| `docker rm jenkins_new` | 刪除容器 |
 | `docker logs jenkins_new` | 查看 Jenkins 日誌 |
 | `docker exec -it jenkins_new bash` | 進入 Jenkins 容器 |
-| `docker restart jenkins_new` | 重啟 Jenkins |
+| `docker restart jenkins_new` | 重新啟動 Jenkins |
 
 ---
 
-## 🧪 Jenkinsfile (Python 測試範例)
+## 🧱 使用自建 Dockerfile (內含 Docker CLI)
+
+若要在 Jenkins 容器內使用 `docker` 指令，有兩種方式：
+
+---
+
+### 方法一：進入容器安裝 docker.io
+
+1. 進入 Jenkins 容器：
+   ```bash
+   docker exec -u 0 -it jenkins_new bash
+   ```
+
+2. 安裝 Docker CLI：
+   ```bash
+   apt-get update
+   apt-get install -y docker.io
+   ```
+
+3. 驗證是否安裝成功：
+   ```bash
+   docker --version
+   ```
+
+> ⚠️ 注意：這種方式在 **容器刪除後會遺失設定**，僅適合測試用途。
+
+---
+
+### 方法二：自建 Jenkins + Docker CLI 映像
+
+建立一個 `Dockerfile`：
+
+```dockerfile
+FROM jenkins/jenkins:lts-jdk17
+USER root
+RUN apt-get update && apt-get install -y docker.io
+USER jenkins
+```
+
+建立映像：
+
+```bash
+cd D:\docker\jenkins_custom_3
+docker build -t myjenkins-docker-3 .
+```
+
+啟動 Jenkins：
+
+#### PowerShell
+
+```powershell
+docker run -d `
+  -p 8082:8080 `
+  -p 50002:50000 `
+  -v "D:\docker\jenkins_home_3:/var/jenkins_home" `
+  -v "//var/run/docker.sock:/var/run/docker.sock" `
+  --name jenkins_custom_3 `
+  myjenkins-docker-3
+```
+
+#### CMD
+
+```cmd
+mkdir D:\docker\jenkins_home_3
+
+docker run -d -p 8082:8080 -p 50002:50000 ^
+-v D:\docker\jenkins_home_3:/var/jenkins_home ^
+-v //var/run/docker.sock:/var/run/docker.sock ^
+--name jenkins_custom_3 myjenkins-docker-3
+```
+
+✅ **優點**：Docker CLI 會預先安裝，重啟不會遺失設定。
+
+---
+
+## ⚙️ Jenkinsfile 範例 (Python 測試)
 
 ```groovy
 pipeline {
@@ -116,35 +183,42 @@ pipeline {
                 sh '''
                     python --version
                     pytest --maxfail=1 --disable-warnings -q
+                    python main.py
                 '''
             }
         }
     }
 
     post {
-        success {
-            echo '✅ All tests passed successfully!'
-        }
-        failure {
-            echo '❌ Tests failed.'
-        }
+        success { echo '✅ All tests passed successfully!' }
+        failure { echo '❌ Tests failed.' }
     }
 }
 ```
 
 ---
 
-## ✅ 驗證安裝成功
+## 🧩 常見錯誤排查
 
-```bash
-docker ps
-```
-應看到：
+| 問題 | 解決方式 |
+|------|----------|
+| `docker: not found` | 確認是否掛載 `/var/run/docker.sock` 或使用自建映像 |
+| `Permission denied` | 在 Dockerfile 中用 `USER root` 安裝，再切回 `USER jenkins` |
+| `apt-get: are you root?` | 容器內需切換為 root 才能安裝軟體 |
+| `Couldn't find any revision to build` | 確認 Jenkins job 指向正確分支（main/master） |
+| `pytest: not found` | 在 Jenkinsfile 的 `Install dependencies` 階段中安裝 pytest |
+| `Invalid agent type "docker" specified` | 確認 Jenkins 有安裝 **Docker Pipeline** 與 **Docker** 插件，安裝後請重啟 Jenkins 再執行。 |
 
-```
-CONTAINER ID   IMAGE                       PORTS
-xxxxxx         jenkins/jenkins:lts-jdk17   0.0.0.0:8081->8080/tcp
-```
+---
 
-開啟 [http://localhost:8081](http://localhost:8081)  
-看到 Jenkins 介面代表成功！ 🎉
+## ✅ 最終驗證步驟
+
+1. 開啟 Jenkins → 新建 Pipeline 專案
+2. 選擇「Pipeline script from SCM」
+3. 指定 Git URL：`https://github.com/cba542/jenkins-pipeline-demo.git`
+4. 運行 Pipeline → 應顯示 `✅ All tests passed successfully!`
+
+---
+
+📦 **完成！**  
+你的 Jenkins 現在可以自動從 Git 下載專案、安裝 Python 依賴、並執行自動化測試 🚀
